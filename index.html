@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>THE SYSTEM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@500;600;700&family=Fraunces:ital,wght@0,600;1,500;1,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#090b10;
+    --panel:#12151d;
+    --panel-2:#171b26;
+    --line:#242a3a;
+    --indigo:#7c6ff0; --indigo-rgb:124,111,240;
+    --indigo-dim:#4c4499;
+    --amber:#f2b705; --amber-rgb:242,183,5;
+    --teal:#4fd1c5; --teal-rgb:79,209,197;
+    --red:#e2584d;
+    --text:#e7e9f0;
+    --text-dim:#8a90a6;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Inter', -apple-system, sans-serif;
+    --heading:'Inter', -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text); font-family:var(--sans);
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:0 16px 48px;}
+
+  /* Sticky status bar */
+  .statusbar{
+    position:sticky; top:0; z-index:10;
+    padding-top:calc(10px + env(safe-area-inset-top,0px));
+    background:linear-gradient(180deg, var(--bg) 70%, transparent);
+    backdrop-filter:blur(6px);
+  }
+  .statuscard{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; box-shadow:0 0 0 1px rgba(var(--indigo-rgb),.05), 0 8px 24px rgba(0,0,0,.35);
+    position:relative; overflow:hidden;
+  }
+  .statuscard::after{
+    content:""; position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, var(--indigo), var(--teal), var(--amber));
+    opacity:.8;
+  }
+  .status-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px;}
+  .rank-chip{
+    font-family:var(--mono); font-weight:800; font-size:13px; letter-spacing:.04em;
+    color:var(--bg); background:var(--amber); padding:2px 8px; border-radius:4px;
+  }
+  .lvl{font-family:var(--mono); font-weight:700; font-size:14px; color:var(--teal);}
+  .title-line{font-size:13px; color:var(--text-dim); margin-top:2px;}
+  .xp-row{display:flex; align-items:center; gap:8px; margin-top:10px;}
+  .xp-track{flex:1; height:8px; background:var(--panel-2); border-radius:5px; overflow:hidden; border:1px solid var(--line);}
+  .xp-fill{height:100%; background:linear-gradient(90deg, var(--indigo-dim), var(--indigo)); transition:width .4s ease;}
+  .xp-num{font-family:var(--mono); font-size:11px; color:var(--text-dim); white-space:nowrap;}
+  .stats-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:12px;}
+  .stat{text-align:center;}
+  .stat-val{font-family:var(--mono); font-weight:700; font-size:15px; color:var(--text);}
+  .stat-key{font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:1px;}
+  .stat-tick{width:16px; height:3px; border-radius:2px; margin:4px auto 0;}
+  .streak-line{font-size:12px; color:var(--text-dim); margin-top:10px; display:flex; justify-content:space-between;}
+  .streak-line b{color:var(--amber); font-weight:700;}
+
+  /* Nav */
+  .nav{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:14px 0;}
+  .nav button{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.02em; color:var(--text-dim);
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 4px;
+    transition:transform .12s ease, background .2s ease, color .2s ease;
+  }
+  .nav button svg{width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;}
+  .nav button.active{color:var(--bg); background:var(--teal); border-color:var(--teal); font-weight:700;}
+  .nav button:active, .btn:active, .complete-all:active, .theme-switch button:active, .font-switch button:active{transform:scale(.96);}
+
+  /* Panels */
+  .panel{display:none;}
+  .panel.active{display:block; animation:panelIn .22s ease;}
+  @keyframes panelIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .section-title{font-family:var(--heading); font-size:17px; font-weight:700; letter-spacing:.01em; margin:4px 0 12px;}
+  .notice{
+    font-family:var(--mono); font-size:12px; color:var(--indigo); border-left:2px solid var(--indigo);
+    padding:6px 10px; margin-bottom:12px; background:rgba(var(--indigo-rgb),.07);
+  }
+  .notice.warn{color:var(--red); border-color:var(--red); background:rgba(226,88,77,.08);}
+  .notice.good{color:var(--teal); border-color:var(--teal); background:rgba(79,209,197,.08);}
+
+  .quest{
+    display:flex; align-items:flex-start; gap:10px; padding:12px; background:var(--panel);
+    border:1px solid var(--line); border-radius:10px; margin-bottom:8px;
+    transition:transform .12s ease, opacity .3s ease, background .3s ease;
+  }
+  .quest:active{transform:scale(.98);}
+  .quest.done{opacity:.45;}
+  .qchk{
+    width:22px; height:22px; border-radius:5px; border:1.5px solid var(--text-dim); flex:none;
+    display:flex; align-items:center; justify-content:center; font-size:13px; margin-top:1px;
+    transition:background .2s ease, border-color .2s ease;
+  }
+  .quest.done .qchk{background:var(--teal); border-color:var(--teal); color:var(--bg); font-weight:700;}
+  .qbody{flex:1;}
+  .qlabel{font-size:14px; line-height:1.35;}
+  .qmeta{font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:3px;}
+  .qlabel.done{text-decoration:line-through;}
+
+  .complete-all{
+    width:100%; margin-top:6px; padding:12px; border-radius:10px; border:1px solid var(--amber);
+    background:rgba(242,183,5,.08); color:var(--amber); font-family:var(--mono); font-weight:700; font-size:13px;
+  }
+  .complete-all:disabled{opacity:.35;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:10px;}
+  .card h3{margin:0 0 6px; font-size:14px; font-family:var(--heading);}
+  #rank-big{font-size:30px; letter-spacing:.02em; background:linear-gradient(90deg,var(--text),var(--text-dim)); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;}
+  .card p{margin:0; font-size:13px; color:var(--text-dim); line-height:1.5;}
+  .achv{display:flex; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line);}
+  .achv:last-child{border-bottom:none;}
+  .achv-icon{font-family:var(--mono); font-weight:800; color:var(--amber); font-size:14px; width:30px;}
+  .achv-txt b{display:block; font-size:13px;}
+  .achv-txt span{font-size:12px; color:var(--text-dim);}
+
+  .report-row{display:flex; justify-content:space-between; font-size:13px; padding:7px 0; border-bottom:1px solid var(--line);}
+  .report-row:last-child{border-bottom:none;}
+  .report-bar{flex:1; height:6px; background:var(--panel-2); border-radius:4px; margin:0 10px; overflow:hidden;}
+  .report-bar i{display:block; height:100%; background:var(--teal);}
+
+  .btn{
+    width:100%; padding:13px; border-radius:10px; border:1px solid var(--indigo); background:var(--indigo);
+    color:#fff; font-weight:700; font-size:14px; margin-top:6px;
+  }
+  .btn.ghost{background:transparent; color:var(--indigo);}
+
+  /* Onboarding */
+  .onboard{position:fixed; inset:0; background:var(--bg); z-index:50; overflow-y:auto;
+    padding:calc(28px + env(safe-area-inset-top,0px)) 20px 40px;}
+  .onboard h1{font-family:var(--heading); font-size:22px; letter-spacing:.01em; margin-bottom:4px;}
+  .onboard .sub{color:var(--text-dim); font-size:13px; margin-bottom:26px;}
+  .field{margin-bottom:22px;}
+  .field label{display:block; font-size:13px; font-weight:600; margin-bottom:8px;}
+  .opts{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .opt{
+    padding:12px 10px; border:1px solid var(--line); border-radius:8px; background:var(--panel);
+    font-size:12.5px; text-align:center; color:var(--text-dim);
+  }
+  .opt.sel{border-color:var(--teal); color:var(--teal); background:rgba(79,209,197,.08); font-weight:700;}
+  input[type=number]{
+    width:100%; padding:12px; border-radius:8px; border:1px solid var(--line); background:var(--panel);
+    color:var(--text); font-size:14px; font-family:var(--sans);
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#090b10; --panel:#12151d; } /* app is intentionally a dark "system" interface in both modes */
+  }
+
+  /* ---------- THEME SWITCHER ---------- */
+  .theme-switch, .font-switch{display:flex; gap:6px; margin:4px 0 2px; overflow-x:auto; -ms-overflow-style:none; scrollbar-width:none;}
+  .theme-switch::-webkit-scrollbar, .font-switch::-webkit-scrollbar{display:none;}
+  .theme-switch button, .font-switch button{
+    font-family:var(--mono); font-size:11px; padding:7px 13px; border-radius:999px; flex:none;
+    border:1px solid var(--line); background:var(--panel); color:var(--text-dim);
+    transition:transform .12s ease, background .2s ease, color .2s ease;
+  }
+  .theme-switch button.active, .font-switch button.active{color:var(--bg); background:var(--teal); border-color:var(--teal); font-weight:700;}
+  .switch-label{font-family:var(--mono); font-size:10px; color:var(--text-dim); letter-spacing:.06em; margin:10px 0 4px;}
+
+  /* ---------- FONT PRESETS ---------- */
+  :root[data-font="system"]{ --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Inter', -apple-system, sans-serif; --heading:'Inter', -apple-system, sans-serif; }
+  :root[data-font="terminal"]{ --mono:'Space Mono', ui-monospace, monospace; --sans:'Space Mono', ui-monospace, monospace; --heading:'Space Mono', ui-monospace, monospace; }
+  :root[data-font="grotesk"]{ --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Inter', -apple-system, sans-serif; --heading:'Space Grotesk', -apple-system, sans-serif; }
+  :root[data-font="serif"]{ --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Inter', -apple-system, sans-serif; --heading:'Fraunces', Georgia, serif; }
+  :root[data-font="serif"] .section-title, :root[data-font="serif"] .onboard h1, :root[data-font="serif"] #rank-big{ font-style:italic; font-weight:600; letter-spacing:0; }
+  :root[data-font="standard"]{
+    --mono:-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --sans:-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --heading:-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  :root[data-font="classic"]{
+    --mono:Georgia, "Times New Roman", Times, serif;
+    --sans:Georgia, "Times New Roman", Times, serif;
+    --heading:Georgia, "Times New Roman", Times, serif;
+  }
+
+  /* ---------- COLOR PALETTES (independent of theme/font) ---------- */
+  :root[data-color="indigo"]{ --indigo:#7c6ff0; --indigo-rgb:124,111,240; --indigo-dim:#4c4499; --teal:#4fd1c5; --teal-rgb:79,209,197; --amber:#f2b705; --amber-rgb:242,183,5; }
+  :root[data-color="ember"]{ --indigo:#dd6b4f; --indigo-rgb:221,107,79; --indigo-dim:#7a3626; --teal:#e8a564; --teal-rgb:232,165,100; --amber:#f2b705; --amber-rgb:242,183,5; }
+  :root[data-color="sage"]{ --indigo:#4f9d80; --indigo-rgb:79,157,128; --indigo-dim:#265040; --teal:#9bc9ab; --teal-rgb:155,201,171; --amber:#dcb55a; --amber-rgb:220,181,90; }
+  :root[data-color="dusk"]{ --indigo:#6e62a6; --indigo-rgb:110,98,166; --indigo-dim:#3a3160; --teal:#8fa3d1; --teal-rgb:143,163,209; --amber:#d4a657; --amber-rgb:212,166,87; }
+  :root[data-color="slate"]{ --indigo:#7489a3; --indigo-rgb:116,137,163; --indigo-dim:#39455a; --teal:#a9b7c7; --teal-rgb:169,183,199; --amber:#c4ab78; --amber-rgb:196,171,120; }
+
+  /* ---------- BACKGROUND DECORATION (hidden for default System theme) ---------- */
+  .bg-decor{position:fixed; inset:0; z-index:-1; overflow:hidden; display:none; pointer-events:none;}
+  .blob{position:absolute; border-radius:50%; filter:blur(60px);}
+  @keyframes drift{ 0%,100%{transform:translate(0,0);} 50%{transform:translate(22px,-28px);} }
+
+  /* ================= GLASSMORPHISM ================= */
+  :root[data-theme="glass"]{ --bg:#0b0f1a; --panel:rgba(255,255,255,.07); --panel-2:rgba(255,255,255,.045); --line:rgba(255,255,255,.14); }
+  :root[data-theme="glass"] .bg-decor{display:block;}
+  :root[data-theme="glass"] .blob-1{background:var(--indigo); width:280px; height:280px; top:-60px; left:-70px; opacity:.32;}
+  :root[data-theme="glass"] .blob-2{background:var(--teal); width:230px; height:230px; bottom:18%; right:-60px; opacity:.28;}
+  :root[data-theme="glass"] .blob-3{background:var(--amber); width:200px; height:200px; bottom:-70px; left:28%; opacity:.22;}
+  :root[data-theme="glass"] .statuscard, :root[data-theme="glass"] .card, :root[data-theme="glass"] .quest,
+  :root[data-theme="glass"] .opt, :root[data-theme="glass"] .achv, :root[data-theme="glass"] .notice,
+  :root[data-theme="glass"] .nav button, :root[data-theme="glass"] input[type=number]{
+    backdrop-filter:blur(20px) saturate(160%); -webkit-backdrop-filter:blur(20px) saturate(160%);
+    border:1px solid var(--line);
+  }
+  :root[data-theme="glass"] .statuscard, :root[data-theme="glass"] .card, :root[data-theme="glass"] .quest{ border-radius:16px; }
+
+  /* ================= LIQUID GLASS ================= */
+  :root[data-theme="liquid"]{ --bg:#07070d; --panel:rgba(255,255,255,.08); --panel-2:rgba(255,255,255,.05); --line:rgba(255,255,255,.24); }
+  :root[data-theme="liquid"] .bg-decor{display:block;}
+  :root[data-theme="liquid"] .blob-1{background:var(--indigo); width:320px; height:320px; top:-90px; left:-90px; opacity:.38; animation:drift 15s ease-in-out infinite;}
+  :root[data-theme="liquid"] .blob-2{background:var(--teal); width:260px; height:260px; top:28%; right:-110px; opacity:.32; animation:drift 19s ease-in-out infinite reverse;}
+  :root[data-theme="liquid"] .blob-3{background:var(--amber); width:230px; height:230px; bottom:-70px; left:18%; opacity:.24; animation:drift 17s ease-in-out infinite;}
+  :root[data-theme="liquid"] .statuscard, :root[data-theme="liquid"] .card, :root[data-theme="liquid"] .quest,
+  :root[data-theme="liquid"] .opt, :root[data-theme="liquid"] .achv, :root[data-theme="liquid"] .notice{
+    backdrop-filter:blur(34px) saturate(200%); -webkit-backdrop-filter:blur(34px) saturate(200%);
+    border:1px solid rgba(255,255,255,.28); border-radius:22px; position:relative; overflow:hidden;
+  }
+  :root[data-theme="liquid"] .statuscard::before, :root[data-theme="liquid"] .card::before, :root[data-theme="liquid"] .quest::before{
+    content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+    background:linear-gradient(125deg, rgba(255,255,255,.38), rgba(255,255,255,0) 42%, rgba(255,255,255,0) 68%, rgba(255,255,255,.14) 100%);
+  }
+  :root[data-theme="liquid"] .nav button{border-radius:999px;}
+  :root[data-theme="liquid"] .btn, :root[data-theme="liquid"] .complete-all{border-radius:999px;}
+
+  /* ================= SPATIAL UI ================= */
+  :root[data-theme="spatial"]{ --bg:#050608; --panel:#0e1117; --panel-2:#13161e; --line:#2a3142; }
+  :root[data-theme="spatial"] .bg-decor{display:block;}
+  :root[data-theme="spatial"] .blob-1{background:var(--indigo); width:260px; height:260px; top:-90px; right:-70px; opacity:.16;}
+  :root[data-theme="spatial"] .blob-2{background:var(--teal); width:220px; height:220px; bottom:-60px; left:-60px; opacity:.13;}
+  :root[data-theme="spatial"] .blob-3{display:none;}
+  :root[data-theme="spatial"] .statuscard, :root[data-theme="spatial"] .card, :root[data-theme="spatial"] .quest,
+  :root[data-theme="spatial"] .opt, :root[data-theme="spatial"] .achv{
+    border:1px solid rgba(255,255,255,.07); border-radius:16px;
+    box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 22px 44px rgba(0,0,0,.6), 0 3px 10px rgba(0,0,0,.45);
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  :root[data-theme="spatial"] .quest:active, :root[data-theme="spatial"] .opt:active{ transform:scale(.97); }
+  :root[data-theme="spatial"] .statusbar .statuscard{
+    box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 28px 56px rgba(var(--indigo-rgb),.18), 0 4px 14px rgba(0,0,0,.5);
+  }
+</style>
+</head>
+<body>
+<div class="bg-decor"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
+<div class="wrap">
+
+  <!-- ONBOARDING -->
+  <div class="onboard" id="onboard">
+    <h1>[ SYSTEM INITIALIZING ]</h1>
+    <div class="sub">A Player has been detected. Baseline data is required to calibrate your Status Window.</div>
+
+    <div class="field">
+      <label>Current fitness level</label>
+      <div class="opts" id="opt-fitness">
+        <div class="opt" data-v="beginner">Beginner</div>
+        <div class="opt" data-v="intermediate">Intermediate</div>
+        <div class="opt" data-v="advanced">Advanced</div>
+        <div class="opt" data-v="athlete">Athlete</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Equipment available</label>
+      <div class="opts" id="opt-equip">
+        <div class="opt" data-v="none">None / bodyweight</div>
+        <div class="opt" data-v="basic">Dumbbells / bands</div>
+        <div class="opt" data-v="gym">Full gym access</div>
+        <div class="opt" data-v="home">Home gym setup</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Primary goal</label>
+      <div class="opts" id="opt-goal">
+        <div class="opt" data-v="strength">Strength &amp; muscle</div>
+        <div class="opt" data-v="endurance">Weight loss &amp; endurance</div>
+        <div class="opt" data-v="discipline">Discipline &amp; habits</div>
+        <div class="opt" data-v="mental">Mental resilience</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Age</label>
+      <input type="number" id="in-age" placeholder="e.g. 27" min="10" max="100">
+    </div>
+
+    <button class="btn" id="btn-begin">BEGIN</button>
+  </div>
+
+  <!-- STATUS BAR (always visible) -->
+  <div class="statusbar">
+    <div class="statuscard">
+      <div class="status-top">
+        <div><span class="rank-chip" id="hud-rank">E</span> <span class="lvl" id="hud-level">LV 1</span></div>
+        <div class="xp-num" id="hud-xpnum">0 / 100 XP</div>
+      </div>
+      <div class="title-line" id="hud-title">Unawakened Hunter</div>
+      <div class="xp-row">
+        <div class="xp-track"><div class="xp-fill" id="hud-xpfill" style="width:0%"></div></div>
+      </div>
+      <div class="stats-grid" id="hud-stats"></div>
+      <div class="streak-line">
+        <span>Streak: <b id="hud-streak">0</b> days</span>
+        <span id="hud-date">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- THEME SWITCHER -->
+  <div class="switch-label">THEME</div>
+  <div class="theme-switch" id="theme-switch">
+    <button data-th="system" class="active">System</button>
+    <button data-th="glass">Glassmorphism</button>
+    <button data-th="liquid">Liquid Glass</button>
+    <button data-th="spatial">Spatial UI</button>
+  </div>
+
+  <!-- COLOR SWITCHER -->
+  <div class="switch-label">COLOR</div>
+  <div class="theme-switch" id="color-switch">
+    <button data-c="indigo" class="active">Indigo</button>
+    <button data-c="ember">Ember</button>
+    <button data-c="sage">Sage</button>
+    <button data-c="dusk">Dusk</button>
+    <button data-c="slate">Slate</button>
+  </div>
+
+  <!-- FONT SWITCHER -->
+  <div class="switch-label">FONT</div>
+  <div class="font-switch" id="font-switch">
+    <button data-f="system" class="active">System Mono</button>
+    <button data-f="terminal">Terminal</button>
+    <button data-f="grotesk">Grotesk</button>
+    <button data-f="serif">Editorial Serif</button>
+    <button data-f="standard">Standard</button>
+    <button data-f="classic">Classic</button>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav" id="nav">
+    <button data-tab="daily" class="active">
+      <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.2"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/><path d="M8.2 14.8l2.1 2.1 4.4-4.4"/></svg>
+      daily
+    </button>
+    <button data-tab="quest">
+      <svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.9 6.4.7-4.8 4.3 1.3 6.3L12 17l-5.5 3.2 1.3-6.3-4.8-4.3 6.4-.7L12 3z"/></svg>
+      quest
+    </button>
+    <button data-tab="inventory">
+      <svg viewBox="0 0 24 24"><path d="M6.5 7.5h11l1 13h-13l1-13z"/><path d="M9 7.5a3 3 0 0 1 6 0"/></svg>
+      items
+    </button>
+    <button data-tab="rank">
+      <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.8-3 8.3-7 9.5-4-1.2-7-4.7-7-9.5V6l7-3z"/></svg>
+      rank
+    </button>
+    <button data-tab="report">
+      <svg viewBox="0 0 24 24"><rect x="4" y="12.5" width="3.4" height="7.5" rx=".6"/><rect x="10.3" y="7.5" width="3.4" height="12.5" rx=".6"/><rect x="16.6" y="3.5" width="3.4" height="16.5" rx=".6"/></svg>
+      report
+    </button>
+    <button data-tab="rest">
+      <svg viewBox="0 0 24 24"><path d="M20 14.2A8.3 8.3 0 1 1 9.8 4a6.8 6.8 0 0 0 10.2 10.2z"/></svg>
+      rest
+    </button>
+    <button data-tab="status">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.4"/><path d="M5 20c0-4.1 3.1-6.6 7-6.6s7 2.5 7 6.6"/></svg>
+      status
+    </button>
+    <button data-tab="levelup">
+      <svg viewBox="0 0 24 24"><path d="M12 19.5V5"/><path d="M6 11l6-6 6 6"/></svg>
+      level
+    </button>
+  </div>
+
+  <!-- PANELS -->
+  <div class="panel active" id="panel-daily">
+    <div class="section-title">[ DAILY QUEST ]</div>
+    <div id="daily-notice"></div>
+    <div id="daily-list"></div>
+    <button class="complete-all" id="btn-complete-all">CLAIM COMPLETION BONUS (+50 XP)</button>
+  </div>
+
+  <div class="panel" id="panel-quest">
+    <div class="section-title">[ SPECIAL QUEST ]</div>
+    <div class="card">
+      <p id="quest-desc">No special quest active. Generate one below — once per day, higher risk, higher reward.</p>
+    </div>
+    <button class="btn" id="btn-gen-quest">GENERATE SPECIAL QUEST</button>
+    <button class="btn ghost" id="btn-complete-quest" style="display:none;">MARK COMPLETE</button>
+  </div>
+
+  <div class="panel" id="panel-inventory">
+    <div class="section-title">[ ACHIEVEMENTS ]</div>
+    <div class="card" id="achv-list"><p>No achievements unlocked yet. Complete quests to earn your first.</p></div>
+  </div>
+
+  <div class="panel" id="panel-rank">
+    <div class="section-title">[ HUNTER RANK ]</div>
+    <div class="card">
+      <h3 id="rank-big">E-RANK</h3>
+      <p id="rank-desc">—</p>
+    </div>
+    <div class="card">
+      <p><b>E</b> Lv 1–9 &nbsp;·&nbsp; <b>D</b> Lv 10–19 &nbsp;·&nbsp; <b>C</b> Lv 20–29<br>
+      <b>B</b> Lv 30–39 &nbsp;·&nbsp; <b>A</b> Lv 40–49 &nbsp;·&nbsp; <b>S</b> Lv 50+</p>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-report">
+    <div class="section-title">[ WEEKLY REPORT ]</div>
+    <div class="card" id="report-body"></div>
+  </div>
+
+  <div class="panel" id="panel-rest">
+    <div class="section-title">[ RECOVERY PROTOCOL ]</div>
+    <div class="card">
+      <p>Rest is part of training. A rest day keeps your streak alive — no quests are skipped, they're replaced.</p>
+    </div>
+    <div id="rest-list"></div>
+    <button class="btn" id="btn-claim-rest">LOG REST DAY</button>
+  </div>
+
+  <div class="panel" id="panel-status">
+    <div class="section-title">[ STATUS ]</div>
+    <div class="card" id="status-body"></div>
+    <button class="btn ghost" id="btn-reset" style="border-color:var(--red); color:var(--red);">RESET SYSTEM</button>
+  </div>
+
+  <div class="panel" id="panel-levelup">
+    <div class="section-title">[ LEVEL PROGRESS ]</div>
+    <div class="card" id="levelup-body"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "ss_state_v1";
+  var STAT_KEYS = ["STR","AGI","VIT","INT","DISC","WILL"];
+  var STAT_COLORS = {STR:"#e2584d", AGI:"#4fd1c5", VIT:"#34d399", INT:"#7c6ff0", DISC:"#f2b705", WILL:"#f472b6"};
+
+  var MENTAL = [
+    "Meditate in silence for 10 minutes","Write down 3 things you're grateful for",
+    "Go 2 hours without checking social media","Take a cold shower for 60 seconds",
+    "Call or talk face-to-face with someone for 10 minutes","Declutter one small space in your home",
+    "Say no to one unnecessary temptation today","Journal one page about today, honestly"
+  ];
+  var SPECIALS = [
+    {d:"Triple Set: 3 rounds of 20 push-ups + 20 squats + 20 sit-ups back to back", stat:"STR", xp:60},
+    {d:"Silent Hour: one full hour with your phone in another room", stat:"WILL", xp:50},
+    {d:"Knowledge Dive: read or study 20 pages outside your usual topic", stat:"INT", xp:50},
+    {d:"Endurance Trial: plank for as long as you can, 3 attempts, note your best", stat:"VIT", xp:50},
+    {d:"Early Riser: tomorrow, wake 1 hour earlier than usual", stat:"DISC", xp:50}
+  ];
+
+  function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
+  function pick(arr, seedStr){ var h=0; for(var i=0;i<seedStr.length;i++){h=(h*31+seedStr.charCodeAt(i))>>>0;} return arr[h%arr.length]; }
+
+  function defaultState(){
+    return {
+      onboarded:false,
+      profile:{fitness:"beginner", equip:"none", goal:"discipline", age:null},
+      level:1, xp:0, xpNeed:100,
+      stats:{STR:10,AGI:10,VIT:10,INT:10,DISC:10,WILL:10},
+      streak:0, lastDate:null, todayDate:null,
+      quests:[], bonusClaimed:false,
+      special:null, specialDate:null,
+      achievements:[], history:{}, penalty:null, theme:"system", font:"system", color:"indigo"
+    };
+  }
+
+  var state = load();
+
+  function load(){
+    try{ var raw=localStorage.getItem(KEY); if(!raw) return defaultState();
+      var s=JSON.parse(raw); return Object.assign(defaultState(), s);
+    }catch(e){ return defaultState(); }
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+  var BASE = {
+    beginner:{pushups:20, squats:20, situps:20, km:2, steps:6000},
+    intermediate:{pushups:50, squats:50, situps:50, km:4, steps:8000},
+    advanced:{pushups:80, squats:80, situps:80, km:6, steps:10000},
+    athlete:{pushups:120, squats:120, situps:120, km:8, steps:12000}
+  };
+
+  function questValues(){
+    var b = BASE[state.profile.fitness] || BASE.beginner;
+    var factor = 1 + Math.floor((state.level-1)/5)*0.15;
+    function r(n){ return Math.max(5, Math.round(n*factor/5)*5); }
+    return {
+      pushups:r(b.pushups), squats:r(b.squats), situps:r(b.situps),
+      km: Math.max(1, Math.round(b.km*factor)), steps: Math.round(b.steps*factor/500)*500
+    };
+  }
+
+  function rankForLevel(lv){
+    if(lv>=50) return {rank:"S", title:"Transcendent Hunter"};
+    if(lv>=40) return {rank:"A", title:"Elite Hunter"};
+    if(lv>=30) return {rank:"B", title:"Veteran Hunter"};
+    if(lv>=20) return {rank:"C", title:"Trained Hunter"};
+    if(lv>=10) return {rank:"D", title:"Awakened Novice"};
+    return {rank:"E", title:"Unawakened Hunter"};
+  }
+
+  function generateDailyQuests(){
+    var v = questValues();
+    var mental = pick(MENTAL, state.todayDate + "m");
+    state.quests = [
+      {id:"pushups", label:v.pushups+" push-ups", stat:"STR", xp:15, done:false},
+      {id:"squats",  label:v.squats+" squats",   stat:"STR", xp:15, done:false},
+      {id:"situps",  label:v.situps+" sit-ups",  stat:"STR", xp:15, done:false},
+      {id:"cardio",  label:v.km+" km run or walk", stat:"AGI", xp:20, done:false},
+      {id:"steps",   label:v.steps.toLocaleString()+"+ steps today", stat:"AGI", xp:15, done:false},
+      {id:"study",   label:"Study or learn a skill for 1 hour", stat:"INT", xp:20, done:false},
+      {id:"water",   label:"Drink enough water (2-3 L)", stat:"VIT", xp:10, done:false},
+      {id:"sleep",   label:"Sleep 7-9 hours last night", stat:"VIT", xp:15, done:false},
+      {id:"mental",  label:mental, stat:"WILL", xp:20, done:false}
+    ];
+    state.bonusClaimed = false;
+  }
+
+  function checkNewDay(){
+    var t = todayStr();
+    if(state.todayDate === t) return;
+    // close out previous day into history
+    if(state.todayDate){
+      var done = (state.quests||[]).filter(function(q){return q.done;}).length;
+      var total = (state.quests||[]).length;
+      state.history[state.todayDate] = {done:done, total:total, allDone: total>0 && done===total};
+      var gap = state.lastDate ? daysBetween(state.lastDate, t) : 1;
+      if(gap > 1){
+        state.streak = 0;
+        state.penalty = {
+          label:"Quest window missed. Recovery protocol engaged.",
+          tasks:["15-minute walk","20-minute review or study session of your choice"],
+          done:false
+        };
+      } else if(total>0 && done===total){
+        state.streak += 1;
+      } else if(total>0){
+        state.streak = 0;
+      }
+    }
+    state.lastDate = state.todayDate || t;
+    state.todayDate = t;
+    state.special = null; state.specialDate = null;
+    generateDailyQuests();
+    save();
+  }
+
+  function addXP(amount, statKey){
+    state.xp += amount;
+    if(statKey) state.stats[statKey] += 1;
+    var leveledUp = false;
+    while(state.xp >= state.xpNeed){
+      state.xp -= state.xpNeed;
+      state.level += 1;
+      state.xpNeed = state.level * 100;
+      STAT_KEYS.forEach(function(k){ state.stats[k] += 1; });
+      leveledUp = true;
+      checkMilestones();
+    }
+    save();
+    return leveledUp;
+  }
+
+  function unlock(id, name, desc){
+    if(state.achievements.some(function(a){return a.id===id;})) return;
+    state.achievements.unshift({id:id, name:name, desc:desc, date:todayStr()});
+  }
+
+  function checkMilestones(){
+    if(state.level>=10) unlock("lvl10","Level 10","Reached Level 10.");
+    if(state.level>=25) unlock("lvl25","Level 25","Reached Level 25.");
+    if(state.level>=50) unlock("lvl50","Level 50","Reached Level 50.");
+    var r = rankForLevel(state.level);
+    unlock("rank-"+r.rank, r.rank+"-Rank Awakened", "Promoted to "+r.rank+"-Rank.");
+    if(state.streak>=3) unlock("streak3","3-Day Streak","Completed quests 3 days running.");
+    if(state.streak>=7) unlock("streak7","7-Day Streak","A full week without missing a quest.");
+    if(state.streak>=30) unlock("streak30","30-Day Streak","30 days of total discipline.");
+  }
+
+  function completeQuest(id){
+    var q = state.quests.find(function(x){return x.id===id;});
+    if(!q || q.done) return;
+    q.done = true;
+    unlock("first","First Step","Completed your first quest.");
+    var lu = addXP(q.xp, q.stat);
+    save(); render();
+    return lu;
+  }
+
+  // ---------- RENDER ----------
+  function render(){
+    checkNewDay();
+    var r = rankForLevel(state.level);
+    document.getElementById("hud-rank").textContent = r.rank;
+    document.getElementById("hud-level").textContent = "LV "+state.level;
+    document.getElementById("hud-title").textContent = r.title;
+    document.getElementById("hud-xpnum").textContent = state.xp+" / "+state.xpNeed+" XP";
+    document.getElementById("hud-xpfill").style.width = Math.min(100, (state.xp/state.xpNeed*100))+"%";
+    document.getElementById("hud-streak").textContent = state.streak;
+    document.getElementById("hud-date").textContent = state.todayDate;
+
+    var sg = document.getElementById("hud-stats"); sg.innerHTML="";
+    STAT_KEYS.forEach(function(k){
+      var d=document.createElement("div"); d.className="stat";
+      d.innerHTML = '<div class="stat-val">'+state.stats[k]+'</div><div class="stat-key">'+k+'</div><div class="stat-tick" style="background:'+STAT_COLORS[k]+'"></div>';
+      sg.appendChild(d);
+    });
+
+    renderDaily(); renderQuestTab(); renderInventory(); renderRank(); renderReport(); renderRest(); renderStatus(); renderLevelup();
+  }
+
+  function renderDaily(){
+    var notice = document.getElementById("daily-notice");
+    notice.innerHTML = "";
+    if(state.penalty && !state.penalty.done){
+      notice.innerHTML = '<div class="notice warn">[ RECOVERY PROTOCOL ACTIVE ] '+state.penalty.label+'</div>';
+    }
+    var list = document.getElementById("daily-list"); list.innerHTML="";
+    state.quests.forEach(function(q){
+      var el = document.createElement("div");
+      el.className = "quest"+(q.done?" done":"");
+      el.innerHTML = '<div class="qchk">'+(q.done?"✓":"")+'</div>'
+        +'<div class="qbody"><div class="qlabel'+(q.done?" done":"")+'">'+q.label+'</div>'
+        +'<div class="qmeta">'+q.stat+' · +'+q.xp+' XP</div></div>';
+      el.addEventListener("click", function(){
+        if(q.done) return;
+        var lu = completeQuest(q.id);
+        flash(lu);
+      });
+      list.appendChild(el);
+    });
+    var allDone = state.quests.length>0 && state.quests.every(function(q){return q.done;});
+    var btn = document.getElementById("btn-complete-all");
+    btn.disabled = !allDone || state.bonusClaimed;
+    btn.textContent = state.bonusClaimed ? "BONUS CLAIMED" : "CLAIM COMPLETION BONUS (+50 XP)";
+  }
+
+  function flash(leveledUp){
+    if(leveledUp){
+      var n = document.createElement("div");
+      n.className="notice good"; n.textContent="[ LEVEL UP! ] Now Level "+state.level;
+      document.querySelector(".statuscard").prepend(n);
+      setTimeout(function(){ n.remove(); }, 2200);
+    }
+  }
+
+  function renderQuestTab(){
+    var desc = document.getElementById("quest-desc");
+    var genBtn = document.getElementById("btn-gen-quest");
+    var doneBtn = document.getElementById("btn-complete-quest");
+    if(state.special && state.specialDate===state.todayDate){
+      desc.innerHTML = "<b>"+state.special.d+"</b><br>Reward: +"+state.special.xp+" XP · "+state.special.stat;
+      genBtn.style.display="none";
+      doneBtn.style.display = state.special.done ? "none" : "block";
+      if(state.special.done) desc.innerHTML += "<br><br>[ QUEST COMPLETED ]";
+    } else {
+      desc.textContent = "No special quest active. Generate one below — once per day, higher risk, higher reward.";
+      genBtn.style.display="block";
+      doneBtn.style.display="none";
+    }
+  }
+
+  function renderInventory(){
+    var el = document.getElementById("achv-list");
+    if(state.achievements.length===0){ el.innerHTML="<p>No achievements unlocked yet. Complete quests to earn your first.</p>"; return; }
+    el.innerHTML = state.achievements.map(function(a){
+      return '<div class="achv"><div class="achv-icon">★</div><div class="achv-txt"><b>'+a.name+'</b><span>'+a.desc+' — '+a.date+'</span></div></div>';
+    }).join("");
+  }
+
+  function renderRank(){
+    var r = rankForLevel(state.level);
+    document.getElementById("rank-big").textContent = r.rank+"-RANK";
+    document.getElementById("rank-desc").textContent = r.title+" · Level "+state.level+" · Next rank at Level "+nextRankLevel(state.level);
+  }
+  function nextRankLevel(lv){
+    if(lv<10) return 10; if(lv<20) return 20; if(lv<30) return 30; if(lv<40) return 40; if(lv<50) return 50; return "— MAX —";
+  }
+
+  function renderReport(){
+    var el = document.getElementById("report-body");
+    var days = [];
+    for(var i=6;i>=0;i--){
+      var d = new Date(); d.setDate(d.getDate()-i);
+      var key = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+      var h = state.history[key];
+      if(key===state.todayDate){
+        var done = state.quests.filter(function(q){return q.done;}).length;
+        h = {done:done, total:state.quests.length};
+      }
+      days.push({key:key, done: h?h.done:0, total: h?h.total:0});
+    }
+    el.innerHTML = days.map(function(d){
+      var pct = d.total ? Math.round(d.done/d.total*100) : 0;
+      return '<div class="report-row"><span>'+d.key.slice(5)+'</span><div class="report-bar"><i style="width:'+pct+'%"></i></div><span>'+d.done+'/'+d.total+'</span></div>';
+    }).join("");
+  }
+
+  function renderRest(){
+    var el = document.getElementById("rest-list"); el.innerHTML="";
+    ["10-15 min gentle stretching or mobility","Short 1-2 km walk","Hydrate well (2L+ water)","Sleep 8+ hours tonight","15 min light reading or reflection"].forEach(function(t){
+      var d=document.createElement("div"); d.className="card"; d.innerHTML="<p>"+t+"</p>"; el.appendChild(d);
+    });
+  }
+
+  function renderStatus(){
+    var r = rankForLevel(state.level);
+    document.getElementById("status-body").innerHTML =
+      "<p><b>Rank:</b> "+r.rank+" — "+r.title+"<br>"+
+      "<b>Level:</b> "+state.level+" ("+state.xp+"/"+state.xpNeed+" XP)<br>"+
+      "<b>Streak:</b> "+state.streak+" days<br>"+
+      "<b>Profile:</b> "+state.profile.fitness+" · "+state.profile.equip+" equipment · goal: "+state.profile.goal+"<br>"+
+      "<b>Stats:</b> "+STAT_KEYS.map(function(k){return k+" "+state.stats[k];}).join(" · ")+"</p>";
+  }
+
+  function renderLevelup(){
+    var pct = Math.round(state.xp/state.xpNeed*100);
+    document.getElementById("levelup-body").innerHTML =
+      "<p>Level "+state.level+" → "+(state.level+1)+"<br>"+
+      state.xp+" / "+state.xpNeed+" XP ("+pct+"%)<br><br>"+
+      "Every level grants +1 to all six stats and scales quest difficulty upward.</p>";
+  }
+
+  // ---------- EVENTS ----------
+  document.getElementById("nav").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    document.querySelectorAll("#nav button").forEach(function(x){x.classList.remove("active");});
+    b.classList.add("active");
+    document.querySelectorAll(".panel").forEach(function(p){p.classList.remove("active");});
+    document.getElementById("panel-"+b.dataset.tab).classList.add("active");
+  });
+
+  document.getElementById("btn-complete-all").addEventListener("click", function(){
+    if(this.disabled) return;
+    state.bonusClaimed = true;
+    var lu = addXP(50, null);
+    unlock("fullclear","Full Clear","Completed every quest in a single day.");
+    save(); render(); flash(lu);
+  });
+
+  document.getElementById("btn-gen-quest").addEventListener("click", function(){
+    var sp = pick(SPECIALS, state.todayDate+"s"+Math.random());
+    state.special = Object.assign({done:false}, sp);
+    state.specialDate = state.todayDate;
+    save(); render();
+  });
+  document.getElementById("btn-complete-quest").addEventListener("click", function(){
+    if(!state.special || state.special.done) return;
+    state.special.done = true;
+    var lu = addXP(state.special.xp, state.special.stat);
+    unlock("special1","Dungeon Clear","Completed your first special quest.");
+    save(); render(); flash(lu);
+  });
+
+  document.getElementById("btn-claim-rest").addEventListener("click", function(){
+    if(state.penalty) state.penalty.done = true;
+    state.quests.forEach(function(q){ q.done = true; });
+    state.bonusClaimed = true;
+    unlock("rest1","Recovery Recognized","Logged a rest day without breaking your streak.");
+    save(); render();
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", function(){
+    if(!confirm("This erases all System data on this device. Continue?")) return;
+    localStorage.removeItem(KEY);
+    location.reload();
+  });
+
+  // ---------- ONBOARDING ----------
+  var sel = {fitness:null, equip:null, goal:null};
+  function wireOpts(groupId, key){
+    document.getElementById(groupId).addEventListener("click", function(e){
+      var o = e.target.closest(".opt"); if(!o) return;
+      Array.prototype.forEach.call(document.getElementById(groupId).children, function(c){c.classList.remove("sel");});
+      o.classList.add("sel");
+      sel[key] = o.dataset.v;
+    });
+  }
+  wireOpts("opt-fitness","fitness");
+  wireOpts("opt-equip","equip");
+  wireOpts("opt-goal","goal");
+
+  document.getElementById("btn-begin").addEventListener("click", function(){
+    if(!sel.fitness || !sel.equip || !sel.goal){
+      alert("Select one option in each category to proceed.");
+      return;
+    }
+    state.profile.fitness = sel.fitness;
+    state.profile.equip = sel.equip;
+    state.profile.goal = sel.goal;
+    var age = parseInt(document.getElementById("in-age").value, 10);
+    state.profile.age = isNaN(age) ? null : age;
+    var base = {STR:10,AGI:10,VIT:10,INT:10,DISC:10,WILL:10};
+    if(sel.fitness==="intermediate"){ base.STR+=3; base.AGI+=3; base.VIT+=3; }
+    if(sel.fitness==="advanced"){ base.STR+=6; base.AGI+=6; base.VIT+=6; }
+    if(sel.fitness==="athlete"){ base.STR+=10; base.AGI+=10; base.VIT+=10; }
+    state.stats = base;
+    state.onboarded = true;
+    state.todayDate = todayStr();
+    generateDailyQuests();
+    save();
+    document.getElementById("onboard").style.display = "none";
+    render();
+  });
+
+  // ---------- THEME ----------
+  function applyTheme(name){
+    document.documentElement.setAttribute("data-theme", name);
+    document.querySelectorAll("#theme-switch button").forEach(function(b){
+      b.classList.toggle("active", b.dataset.th === name);
+    });
+  }
+  document.getElementById("theme-switch").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    state.theme = b.dataset.th;
+    save();
+    applyTheme(state.theme);
+  });
+
+  // ---------- FONT ----------
+  function applyFont(name){
+    document.documentElement.setAttribute("data-font", name);
+    document.querySelectorAll("#font-switch button").forEach(function(b){
+      b.classList.toggle("active", b.dataset.f === name);
+    });
+  }
+  document.getElementById("font-switch").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    state.font = b.dataset.f;
+    save();
+    applyFont(state.font);
+  });
+
+  // ---------- COLOR ----------
+  function applyColor(name){
+    document.documentElement.setAttribute("data-color", name);
+    document.querySelectorAll("#color-switch button").forEach(function(b){
+      b.classList.toggle("active", b.dataset.c === name);
+    });
+  }
+  document.getElementById("color-switch").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    state.color = b.dataset.c;
+    save();
+    applyColor(state.color);
+  });
+
+  // ---------- INIT ----------
+  applyTheme(state.theme || "system");
+  applyColor(state.color || "indigo");
+  applyFont(state.font || "system");
+  if(state.onboarded){
+    document.getElementById("onboard").style.display = "none";
+  }
+  render();
+})();
+</script>
+</body>
+</html>
